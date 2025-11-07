@@ -9,12 +9,14 @@
     "build": "tsc",
     "start": "node dist/src/index.js",
     "mongo": "mongod --dbpath ~/data/db",
-    "test": "clear && jest"
+    "test": "clear && jest",
+    "test:coverage": "jest --coverage"
   },
   "author": "Google LLC",
   "license": "Apache-2.0",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "express-validator": "^7.2.1",
@@ -22,6 +24,7 @@
     "mongoose": "^8.19.2"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
