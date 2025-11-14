@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import User from "../Models/User";
+import User, { IUser } from "../Models/User";
 import { validationResult } from "express-validator";
 import { comparePassword, hashPassword } from "../util/bycrypt";
 import { randomUUID } from "crypto";
@@ -7,6 +7,7 @@ import { signAccess, signRefresh, verifyRefresh } from "../util/jwt";
 import { AuthRequest } from "../Middlewares/protect";
 
 export const getUser = async (req: AuthRequest, res: Response): Promise<Response> => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" })
     const userid = req.user.id
     const user = await User.findById(userid);
     if (!user) return res.status(401).json({ error: "Unauthorized" });
@@ -40,7 +41,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         return res.status(400).json({ errors: errors.array() });
     }
     const { email, password } = req.body
-    const user = await User.findOne({ email })
+    const user: IUser | null = await User.findOne({ email })
     if (!user) {
         return res.status(404).json({ errors: [{ msg: "User not found" }] });
     }

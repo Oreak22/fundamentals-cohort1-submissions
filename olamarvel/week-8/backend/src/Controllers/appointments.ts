@@ -10,7 +10,7 @@ export const createAppointment = async (req: AuthRequest, res: Response) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    if (!req.body.user) {
+    if (!req.body.user && req.user) {
       req.body.user = req.user.id;
     }
     const appt = await Appointment.create(req.body);
@@ -22,7 +22,9 @@ export const createAppointment = async (req: AuthRequest, res: Response) => {
 };
 
 export const getAppointments = async (req: AuthRequest, res: Response): Promise<Response> => {
-
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
   const appointments = await Appointment.find({ user: req.user.id })
     .populate({
       path: 'user',
