@@ -1,6 +1,6 @@
 # PayVerse Frontend
 
-This React + Vite frontend demonstrates the client-side implementation of PayVerse's trade-off choices (REST + JWT). It provides a minimal UI for authentication and transaction operations and is intended to be run against the backend POC.
+Distributed payments platform frontend built with React + Vite. Demonstrates client-side implementation of PayVerse's technical trade-offs (REST + JWT) with full inter-account transfer capabilities and multi-regional payment processing.
 
 ## Trade-off Implementation
 
@@ -10,10 +10,13 @@ This React + Vite frontend demonstrates the client-side implementation of PayVer
 
 ## Features
 
-- Login page with loading and error states
-- Dashboard page listing transactions and a simple create-flow
-- Protected routes (redirect to login if unauthenticated)
-- Responsive layout and minimal accessibility improvements
+- 🔐 **Secure Authentication**: JWT-based login with role-based access
+- 💸 **Inter-Account Transfers**: Real-time P2P payments between users
+- 🔍 **User Discovery**: Search recipients by name, email, or account number
+- 💰 **Balance Management**: Real-time balance tracking and updates
+- 🌍 **Multi-Regional Support**: Cross-regional transaction processing
+- 📊 **Analytics Dashboard**: Different views for admin vs regular users
+- 📱 **Responsive Design**: Mobile-friendly interface with loading states
 
 ## Quickstart
 
@@ -46,10 +49,20 @@ Vite will print the local dev URL (commonly `http://localhost:5173`). Open that 
 
 ## Demo Credentials
 
-For testing and demonstration purposes:
+For testing distributed payments:
 
-- **Admin Account**: admin@payverse.com / password123
-- **User Account**: user@payverse.com / password123
+- **Admin Account**: admin@payverse.com / password123 (₦1,000,000 - PV001 - NG-LAGOS)
+- **User Account**: user@payverse.com / password123 (₦150,000 - PV002 - NG-ABUJA)
+- **Alice Account**: alice@payverse.com / password123 (₦75,000 - PV003 - NG-LAGOS)
+- **Bob Account**: bob@payverse.com / password123 (₦200,000 - PV004 - NG-KANO)
+
+## Testing Inter-Account Transfers
+
+1. Login as any user
+2. Click "Transfer Funds" button
+3. Search for recipient by name/email/account
+4. Enter amount and description
+5. Complete transfer and see real-time balance updates
 
 ## Architecture notes
 
@@ -60,12 +73,24 @@ For testing and demonstration purposes:
 
 ## API Integration
 
-This frontend expects the backend to expose REST endpoints on the configured base URL (see `VITE_API_BASE_URL`). Example endpoints used:
+Distributed payments platform endpoints:
 
-- `POST /api/auth/login`
-- `POST /api/auth/refresh`
-- `GET /api/transactions`
-- `POST /api/transactions`
+**Authentication:**
+- `POST /api/auth/login` - User authentication
+- `POST /api/auth/refresh` - Token refresh
+- `GET /api/auth/validate` - Token validation
+
+**Transactions:**
+- `GET /api/transactions` - User transaction history
+- `POST /api/transactions` - Create deposit/withdrawal
+- `POST /api/transactions/transfer` - Inter-account transfers
+- `GET /api/transactions/balance` - Current balance
+- `GET /api/transactions/stats` - System statistics (admin)
+
+**Users:**
+- `GET /api/users/search` - Search users for transfers
+- `GET /api/users/profile` - User profile and account details
+- `GET /api/users` - All users (admin only)
 
 ## Postman
 

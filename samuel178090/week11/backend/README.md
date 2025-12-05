@@ -1,6 +1,6 @@
 # PayVerse Backend API
 
-> Secure payment processing platform built with Node.js and Express
+> Distributed payment processing platform built with Node.js and Express
 
 ## Architecture Overview
 
@@ -26,9 +26,11 @@ PayVerse implements a modern fintech backend with strategic technical decisions 
 ## Features
 
 - 🔐 **Secure Authentication**: JWT-based with refresh token rotation
-- 💰 **Transaction Processing**: Credit/debit operations with validation
+- 💰 **Inter-Account Transfers**: Real-time P2P payments across regions
+- 🌍 **Multi-Regional Support**: Cross-regional transaction processing
 - 👥 **User Management**: Role-based access control (Admin/User)
-- 📊 **Real-time Analytics**: Transaction statistics and reporting
+- 📊 **Real-time Analytics**: Transaction statistics and regional reporting
+- 💳 **Account Management**: Balance tracking and account discovery
 - 🛡️ **Security**: Input validation, error handling, and rate limiting
 
 ## Quick Start
@@ -65,10 +67,12 @@ Server runs on `http://localhost:3002`
 
 ## Demo Credentials
 
-For testing and demonstration purposes:
+For testing distributed payments:
 
-- **Admin Account**: admin@payverse.com / password123
-- **User Account**: user@payverse.com / password123
+- **Admin Account**: admin@payverse.com / password123 (₦1,000,000 - PV001)
+- **User Account**: user@payverse.com / password123 (₦150,000 - PV002)
+- **Alice Account**: alice@payverse.com / password123 (₦75,000 - PV003)
+- **Bob Account**: bob@payverse.com / password123 (₦200,000 - PV004)
 
 ## API Documentation
 
@@ -99,25 +103,47 @@ Validate JWT token (requires Authorization header)
 ### Transaction Endpoints
 
 #### POST `/api/transactions`
-Create new transaction (authenticated)
+Create deposit/withdrawal transaction
 ```json
 {
   "amount": 50000,
-  "type": "credit",
-  "description": "Payment received"
+  "type": "deposit",
+  "description": "Account funding"
+}
+```
+
+#### POST `/api/transactions/transfer`
+Transfer funds between accounts
+```json
+{
+  "receiverId": 3,
+  "amount": 25000,
+  "description": "Payment for services"
 }
 ```
 
 #### GET `/api/transactions`
-Get user's transactions (authenticated)
+Get user's transaction history (authenticated)
 
 #### GET `/api/transactions/all`
 Get all system transactions (admin only)
 
+#### GET `/api/transactions/balance`
+Get current account balance
+
+#### GET `/api/transactions/stats`
+Get transaction statistics (admin only)
+
 ### User Management
 
 #### GET `/api/users`
-Get all users (admin only)
+Get all users with balances (admin only)
+
+#### GET `/api/users/search?query=alice`
+Search users for transfers
+
+#### GET `/api/users/profile`
+Get current user profile and account details
 
 ## Project Structure
 

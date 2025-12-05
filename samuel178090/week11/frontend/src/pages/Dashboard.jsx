@@ -10,15 +10,27 @@ const Dashboard = () => {
   const [success, setSuccess] = useState('');
   const [newTransaction, setNewTransaction] = useState({
     amount: '',
-    type: 'credit',
+    type: 'deposit',
     description: ''
   });
+  const [transferData, setTransferData] = useState({
+    receiverId: '',
+    amount: '',
+    description: ''
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [userBalance, setUserBalance] = useState(0);
+  const [userProfile, setUserProfile] = useState(null);
+  const [showTransferForm, setShowTransferForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
     fetchTransactions();
+    fetchUserProfile();
+    fetchBalance();
     if (user?.role === 'admin') {
       fetchUsers();
     }
@@ -47,6 +59,37 @@ const Dashboard = () => {
     }
   };
 
+  const fetchUserProfile = async () => {
+    try {
+      const response = await userAPI.getProfile();
+      setUserProfile(response.data);
+    } catch (error) {
+      console.error('Failed to fetch profile');
+    }
+  };
+
+  const fetchBalance = async () => {
+    try {
+      const response = await transactionAPI.getBalance();
+      setUserBalance(response.data.balance);
+    } catch (error) {
+      console.error('Failed to fetch balance');
+    }
+  };
+
+  const searchUsers = async (query) => {
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      const response = await userAPI.search(query);
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Search failed');
+    }
+  };
+
   const getUserName = (userId) => {
     const foundUser = users.find(u => u.id === userId);
     return foundUser ? foundUser.fullName : `User ${userId}`;
@@ -60,11 +103,34 @@ const Dashboard = () => {
 
     try {
       await transactionAPI.create(newTransaction);
-      setNewTransaction({ amount: '', type: 'credit', description: '' });
+      setNewTransaction({ amount: '', type: 'deposit', description: '' });
       setSuccess('Transaction created successfully!');
       fetchTransactions();
+      fetchBalance();
     } catch (error) {
       setError(error.response?.data?.error || 'Failed to create transaction');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleTransfer = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await transactionAPI.transfer(transferData);
+      setTransferData({ receiverId: '', amount: '', description: '' });
+      setSearchQuery('');
+      setSearchResults([]);
+      setShowTransferForm(false);
+      setSuccess(`Transfer completed! New balance: ₦${response.data.senderBalance.toLocaleString()}`);
+      fetchTransactions();
+      fetchBalance();
+    } catch (error) {
+      setError(error.response?.data?.error || 'Transfer failed');
     } finally {
       setCreating(false);
     }
@@ -77,14 +143,33 @@ const Dashboard = () => {
     });
   };
 
+  const handleTransferChange = (e) => {
+    setTransferData({
+      ...transferData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    searchUsers(query);
+  };
+
+  const selectReceiver = (user) => {
+    setTransferData({ ...transferData, receiverId: user.id });
+    setSearchQuery(user.fullName);
+    setSearchResults([]);
+  };
+
   // Calculate stats
   const stats = {
     total: transactions.length,
     completed: transactions.filter(t => t.status === 'completed').length,
     pending: transactions.filter(t => t.status === 'pending').length,
-    totalAmount: transactions.reduce((sum, t) => {
-      return sum + (t.type === 'credit' ? t.amount : -t.amount);
-    }, 0)
+    sent: transactions.filter(t => t.direction === 'sent').length,
+    received: transactions.filter(t => t.direction === 'received').length,
+    totalVolume: transactions.reduce((sum, t) => sum + t.amount, 0)
   };
 
   if (loading) {
@@ -115,7 +200,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-4" style={{ marginBottom: '20px' }}>
             <div className="card" style={{ textAlign: 'center', padding: '20px', backgroundColor: '#fef2f2' }}>
               <div style={{ fontSize: '28px', fontWeight: '700', color: '#dc2626', marginBottom: '4px' }}>
-                {new Set(transactions.map(t => t.userId)).size}
+                {users.length}
               </div>
               <div style={{ color: '#991b1b', fontSize: '14px', fontWeight: '600' }}>👥 Total Users</div>
             </div>
@@ -129,7 +214,7 @@ const Dashboard = () => {
             
             <div className="card" style={{ textAlign: 'center', padding: '20px', backgroundColor: '#f0fdf4' }}>
               <div style={{ fontSize: '28px', fontWeight: '700', color: '#16a34a', marginBottom: '4px' }}>
-                ₦{transactions.reduce((sum, t) => sum + Math.abs(t.amount), 0).toLocaleString()}
+                ₦{stats.totalVolume.toLocaleString()}
               </div>
               <div style={{ color: '#166534', fontSize: '14px', fontWeight: '600' }}>💰 Total Volume</div>
             </div>
@@ -216,40 +301,134 @@ const Dashboard = () => {
         </>
       ) : (
         // USER STATS - Personal Overview
-        <div className="grid grid-cols-4" style={{ marginBottom: '32px' }}>
-          <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#2563eb', marginBottom: '4px' }}>
-              {stats.total}
+        <>
+          <div className="grid grid-cols-4" style={{ marginBottom: '20px' }}>
+            <div className="card" style={{ textAlign: 'center', padding: '20px', backgroundColor: '#f0f9ff' }}>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#0284c7', marginBottom: '4px' }}>
+                ₦{userBalance.toLocaleString()}
+              </div>
+              <div style={{ color: '#0c4a6e', fontSize: '14px', fontWeight: '600' }}>💰 Current Balance</div>
             </div>
-            <div style={{ color: '#6b7280', fontSize: '14px' }}>Your Transactions</div>
+            
+            <div className="card" style={{ textAlign: 'center', padding: '20px', backgroundColor: '#f0fdf4' }}>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#16a34a', marginBottom: '4px' }}>
+                {stats.received}
+              </div>
+              <div style={{ color: '#166534', fontSize: '14px', fontWeight: '600' }}>📥 Received</div>
+            </div>
+            
+            <div className="card" style={{ textAlign: 'center', padding: '20px', backgroundColor: '#fef2f2' }}>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#dc2626', marginBottom: '4px' }}>
+                {stats.sent}
+              </div>
+              <div style={{ color: '#991b1b', fontSize: '14px', fontWeight: '600' }}>📤 Sent</div>
+            </div>
+            
+            <div className="card" style={{ textAlign: 'center', padding: '20px', backgroundColor: '#fffbeb' }}>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#d97706', marginBottom: '4px' }}>
+                {userProfile?.region || 'NG-LAGOS'}
+              </div>
+              <div style={{ color: '#92400e', fontSize: '14px', fontWeight: '600' }}>🌍 Region</div>
+            </div>
           </div>
           
-          <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#16a34a', marginBottom: '4px' }}>
-              {stats.completed}
-            </div>
-            <div style={{ color: '#6b7280', fontSize: '14px' }}>Completed</div>
+          {/* Transfer Money Section */}
+          <div className="card" style={{ backgroundColor: '#f0f9ff', border: '2px solid #0284c7', marginBottom: '20px' }}>
+            <h3 style={{ color: '#0c4a6e', marginBottom: '16px' }}>💸 Send Money</h3>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setShowTransferForm(!showTransferForm)}
+              style={{ marginBottom: showTransferForm ? '20px' : '0' }}
+            >
+              {showTransferForm ? '❌ Cancel Transfer' : '💸 Transfer Funds'}
+            </button>
+            
+            {showTransferForm && (
+              <form onSubmit={handleTransfer}>
+                <div className="grid grid-cols-1" style={{ gap: '16px' }}>
+                  <div className="form-group">
+                    <label>Search Recipient</label>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      placeholder="Search by name, email, or account number..."
+                    />
+                    {searchResults.length > 0 && (
+                      <div style={{ 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: '8px', 
+                        marginTop: '8px',
+                        backgroundColor: 'white'
+                      }}>
+                        {searchResults.map(user => (
+                          <div 
+                            key={user.id}
+                            onClick={() => selectReceiver(user)}
+                            style={{
+                              padding: '12px',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #f3f4f6'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                          >
+                            <div style={{ fontWeight: '600' }}>{user.fullName}</div>
+                            <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                              {user.email} • {user.accountNumber} • {user.region}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2" style={{ gap: '16px' }}>
+                    <div className="form-group">
+                      <label>Amount (₦)</label>
+                      <input
+                        type="number"
+                        name="amount"
+                        value={transferData.amount}
+                        onChange={handleTransferChange}
+                        required
+                        min="100"
+                        step="100"
+                        placeholder="25000"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>Description</label>
+                      <input
+                        type="text"
+                        name="description"
+                        value={transferData.description}
+                        onChange={handleTransferChange}
+                        placeholder="Payment for..."
+                      />
+                    </div>
+                  </div>
+                  
+                  <button 
+                    type="submit" 
+                    className="btn btn-success"
+                    disabled={creating || !transferData.receiverId || !transferData.amount}
+                  >
+                    {creating ? (
+                      <>
+                        <div className="spinner" style={{ width: '16px', height: '16px', marginRight: '8px' }}></div>
+                        Processing Transfer...
+                      </>
+                    ) : (
+                      '💸 Send Money'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
-          
-          <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#d97706', marginBottom: '4px' }}>
-              {stats.pending}
-            </div>
-            <div style={{ color: '#6b7280', fontSize: '14px' }}>Pending</div>
-          </div>
-          
-          <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{ 
-              fontSize: '28px', 
-              fontWeight: '700', 
-              color: stats.totalAmount >= 0 ? '#16a34a' : '#dc2626',
-              marginBottom: '4px' 
-            }}>
-              ₦{Math.abs(stats.totalAmount).toLocaleString()}
-            </div>
-            <div style={{ color: '#6b7280', fontSize: '14px' }}>Your Balance</div>
-          </div>
-        </div>
+        </>
       )}
       
       {error && <div className="error">{error}</div>}
@@ -296,8 +475,8 @@ const Dashboard = () => {
                 value={newTransaction.type}
                 onChange={handleInputChange}
               >
-                <option value="credit">💰 Credit (Incoming)</option>
-                <option value="debit">💸 Debit (Outgoing)</option>
+                <option value="deposit">💰 Deposit (Add Money)</option>
+                <option value="withdrawal">💸 Withdrawal (Remove Money)</option>
               </select>
             </div>
             
@@ -314,7 +493,7 @@ const Dashboard = () => {
             
             <button 
               type="submit" 
-              className={`btn ${newTransaction.type === 'credit' ? 'btn-success' : 'btn-primary'}`}
+              className={`btn ${newTransaction.type === 'deposit' ? 'btn-success' : 'btn-primary'}`}
               disabled={creating}
               style={{ marginBottom: '20px' }}
             >
@@ -324,7 +503,7 @@ const Dashboard = () => {
                   Processing...
                 </>
               ) : (
-                `${newTransaction.type === 'credit' ? '💰' : '💸'} Create ${newTransaction.type === 'credit' ? 'Credit' : 'Debit'}`
+                `${newTransaction.type === 'deposit' ? '💰' : '💸'} ${newTransaction.type === 'deposit' ? 'Deposit' : 'Withdraw'}`
               )}
             </button>
           </div>
@@ -372,20 +551,33 @@ const Dashboard = () => {
                 {transactions.map((transaction) => (
                   <tr key={transaction.id}>
                     <td style={{ fontFamily: 'monospace', fontWeight: '600' }}>#{transaction.id}</td>
-                    {user?.role === 'admin' && <td>User {transaction.userId}</td>}
+                    {user?.role === 'admin' && (
+                      <td>
+                        {transaction.senderId && transaction.receiverId ? 
+                          `${transaction.senderId} → ${transaction.receiverId}` : 
+                          `User ${transaction.senderId || transaction.receiverId}`
+                        }
+                      </td>
+                    )}
                     <td>
                       <span style={{ 
-                        color: transaction.type === 'credit' ? '#16a34a' : '#dc2626',
+                        color: transaction.direction === 'received' || transaction.type === 'deposit' ? '#16a34a' : '#dc2626',
                         fontWeight: '700',
                         fontSize: '16px'
                       }}>
-                        {transaction.type === 'credit' ? '+' : '-'}₦{transaction.amount.toLocaleString()}
+                        {(transaction.direction === 'received' || transaction.type === 'deposit') ? '+' : '-'}₦{transaction.amount.toLocaleString()}
                       </span>
                     </td>
                     <td>
                       <span className={`badge badge-${transaction.type}`}>
-                        {transaction.type === 'credit' ? '💰 Credit' : '💸 Debit'}
+                        {transaction.type === 'transfer' ? '🔄 Transfer' : 
+                         transaction.type === 'deposit' ? '💰 Deposit' : '💸 Withdrawal'}
                       </span>
+                      {transaction.direction && (
+                        <span className={`badge badge-${transaction.direction === 'received' ? 'success' : 'primary'}`} style={{ marginLeft: '4px' }}>
+                          {transaction.direction === 'received' ? '📥' : '📤'}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <span className={`badge badge-${transaction.status === 'completed' ? 'success' : 'warning'}`}>
@@ -394,6 +586,11 @@ const Dashboard = () => {
                     </td>
                     <td style={{ color: '#6b7280' }}>
                       {transaction.description || 'No description'}
+                      {transaction.counterparty && (
+                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                          {transaction.direction === 'sent' ? 'To: ' : 'From: '}{transaction.counterparty}
+                        </div>
+                      )}
                     </td>
                     <td style={{ color: '#6b7280', fontSize: '14px' }}>
                       {new Date(transaction.createdAt).toLocaleDateString('en-US', {

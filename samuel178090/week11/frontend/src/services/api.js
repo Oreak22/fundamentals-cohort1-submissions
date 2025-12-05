@@ -82,12 +82,17 @@ export const authAPI = {
 
 export const transactionAPI = {
   create: (transaction) => api.post('/transactions', transaction),
+  transfer: (transferData) => api.post('/transactions/transfer', transferData),
   getAll: () => api.get('/transactions'),
   getAllAdmin: () => api.get('/transactions/all'),
+  getBalance: () => api.get('/transactions/balance'),
+  getStats: () => api.get('/transactions/stats'),
 };
 
 export const userAPI = {
   getAll: () => api.get('/users'),
+  search: (query) => api.get(`/users/search?query=${encodeURIComponent(query)}`),
+  getProfile: () => api.get('/users/profile'),
 };
 
 export default api;
