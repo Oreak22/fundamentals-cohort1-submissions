@@ -11,41 +11,9 @@ messages through provider integrations. Goals:
 -   Provide observability and job status via a small frontend/dashboard.
 
 ## Architecture Diagram
+    ![Architecture-diagram](https://github.com/user-attachments/assets/edef2453-a1fd-476f-b6ab-64bcc48ae709)
 
-    ┌──────────────┐    HTTPS     ┌────────────────┐     (writes)
-    │  Clients /   │ ───────────> │  API Gateway   │ ───────────────┐
-    │  Dashboard   │              │  (Express.js)  │                │
-    └──────────────┘              └────────────────┘                │
-            ▲                             │                         ▼
-            │                             │                ┌────────────────┐
-            │                             │                │   MongoDB      │
-            │                             │                │ (Jobs + Logs)  │
-            │                             │                └────────────────┘
-            │                             │                          ▲
-            │                             │ publishes jobId          │
-            │                             ▼                          │
-            │                      ┌────────────┐                    │
-            │                      │  RabbitMQ  │────────────────────┘
-            │                      │ (Durable)  │
-            │                      └────────────┘
-            │                             │
-            │                             ▼
-            │                   ┌─────────────────────┐
-            │                   │   Worker Pool       │
-            │                   │ (stateless containers│
-            │                   │  or processes)      │
-            │                   └─────────────────────┘
-            │                             │
-            │                             ▼
-            │               ┌─────────────────────────────┐
-            │               │ Provider Dispatcher / Gate  │
-            │               │  ├→ Provider A (SendGrid)   │
-            │               │  └→ Provider B (Twilio/SES) │
-            │               └─────────────────────────────┘
-            │                             │
-            │                             ▼
-            │                   External Provider Networks
-
+    
 ## Components & Responsibilities
 
 -   **API (Express/Node.js)** -- Ingests notifications, persists jobs,
